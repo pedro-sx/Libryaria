@@ -22,6 +22,7 @@ const fileInput = $('fileInput');
 const dialog = $('bookDialog');
 const readerPage = $('readerPage');
 const readerFrame = $('readerFrame');
+const readerLoading = $('readerLoading');
 const readerUnavailable = $('readerUnavailable');
 const readerPageStatus = $('readerPageStatus');
 const readerPrevious = $('readerPrevious');
@@ -132,12 +133,23 @@ function clearReaderSource() {
   state.readerPdf = null;
   state.readerPdfPage = 1;
   state.readerMode = null;
+  readerLoading.hidden = true;
+}
+
+function setReaderLoading(isLoading) {
+  readerLoading.hidden = !isLoading;
 }
 
 function showReaderUnavailable(message) {
+  setReaderLoading(false);
   readerFrame.hidden = true;
   readerUnavailable.hidden = false;
   readerUnavailable.querySelector('p').textContent = message;
+}
+
+function setReaderActive(isActive) {
+  document.documentElement.classList.toggle('reader-active', isActive);
+  document.body.classList.toggle('reader-active', isActive);
 }
 
 function updateReaderNavigation(current, total) {
@@ -172,6 +184,7 @@ async function renderPdfPage() {
   readerFrame.replaceChildren(canvas);
   await page.render({ canvasContext: context, viewport }).promise;
   updateReaderNavigation(state.readerPdfPage, pdf.numPages);
+  setReaderLoading(false);
 }
 
 async function renderPdf(file, session) {
@@ -215,25 +228,91 @@ async function renderEpub(file, session) {
     rendition.hooks.content.register((contents) => {
       const document = contents.document;
       if (document.getElementById('libryari-reader-image-style')) return;
+      const pageWidth = Math.max(readerFrame.clientWidth, 1);
       const style = document.createElement('style');
       style.id = 'libryari-reader-image-style';
       style.textContent = `
+        html {
+          width: 100% !important;
+          height: 100% !important;
+          min-height: 100% !important;
+          overflow: hidden !important;
+        }
+        body {
+          /* EPUB.js lays paginated content out in columns that extend beyond
+             the body's first-page box. Hiding overflow on the body clips every
+             column after the first, leaving a cream page with accessible text. */
+          width: ${pageWidth}px !important;
+          height: 100% !important;
+          min-height: 100% !important;
+          overflow: visible !important;
+        }
+        body {
+          box-sizing: border-box !important;
+          margin: 0 !important;
+          padding: 1.25rem 1.1rem !important;
+          font-size: 1.12rem !important;
+          line-height: 1.6 !important;
+        }
+        p, blockquote, div, section {
+          max-width: 100% !important;
+          min-height: 0 !important;
+        }
+        p, blockquote {
+          margin: 0 0 1rem !important;
+        }
+        [class^="calibre_"], [class*=" calibre_"] {
+          width: auto !important;
+          height: auto !important;
+          min-height: 0 !important;
+          margin: 1.15rem 0 0 !important;
+        }
+        .mbp_pagebreak {
+          display: none !important;
+        }
         img, svg, video, canvas {
           box-sizing: border-box !important;
           display: block !important;
           max-width: 100% !important;
+          max-height: 72vh !important;
+          width: auto !important;
           height: auto !important;
+          margin: 0 auto !important;
           object-fit: contain !important;
         }
-        img { width: auto !important; }
-        html, body { overflow: hidden !important; }
-        body { overflow-wrap: anywhere; }
+        body { overflow-wrap: anywhere !important; }
       `;
       document.head.appendChild(style);
     });
-    rendition.on('relocated', (location) => {
+    let contentReady = Promise.resolve();
+    rendition.on('rendered', (section, view) => {
+      const document = view?.contents?.document;
+      const assets = Array.from(document?.images || []);
+      contentReady = Promise.all(assets.map((image) => new Promise((resolve) => {
+        if (image.complete) {
+          resolve();
+          return;
+        }
+
+        let timeout;
+        const finish = () => {
+          clearTimeout(timeout);
+          image.removeEventListener('load', finish);
+          image.removeEventListener('error', finish);
+          resolve();
+        };
+        image.addEventListener('load', finish, { once: true });
+        image.addEventListener('error', finish, { once: true });
+        timeout = setTimeout(finish, 2500);
+        if (image.complete) finish();
+      })));
+    });
+    rendition.on('relocated', async (location) => {
       if (state.readerRendition !== rendition) return;
       updateEpubNavigation(location);
+      await contentReady;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      if (state.readerRendition === rendition) setReaderLoading(false);
     });
     state.readerBook = book;
     state.readerRendition = rendition;
@@ -264,7 +343,8 @@ async function openReader(book) {
   const session = state.readerSession;
   $('readerTitle').textContent = book.title;
   readerPage.hidden = false;
-  document.body.classList.add('reader-active');
+  setReaderActive(true);
+  setReaderLoading(true);
   updateReaderNavigation(0, 0);
   if (window.location.hash !== '#leitor') {
     window.history.pushState({ reader: true }, '', '#leitor');
@@ -293,7 +373,7 @@ async function openReader(book) {
 function closeReader() {
   if (readerPage.hidden) return;
   readerPage.hidden = true;
-  document.body.classList.remove('reader-active');
+  setReaderActive(false);
   clearReaderSource();
   if (window.location.hash === '#leitor') window.history.back();
 }
@@ -325,15 +405,23 @@ $('saveBook').onclick = () => {
 $('dialogClose').onclick = closeBookDialog;
 $('readerClose').onclick = closeReader;
 readerPrevious.onclick = async () => {
-  if (state.readerMode === 'epub') await state.readerRendition?.prev();
+  if (state.readerMode === 'epub') {
+    setReaderLoading(true);
+    await state.readerRendition?.prev();
+  }
   if (state.readerMode === 'pdf' && state.readerPdfPage > 1) {
+    setReaderLoading(true);
     state.readerPdfPage -= 1;
     await renderPdfPage();
   }
 };
 readerNext.onclick = async () => {
-  if (state.readerMode === 'epub') await state.readerRendition?.next();
+  if (state.readerMode === 'epub') {
+    setReaderLoading(true);
+    await state.readerRendition?.next();
+  }
   if (state.readerMode === 'pdf' && state.readerPdf && state.readerPdfPage < state.readerPdf.numPages) {
+    setReaderLoading(true);
     state.readerPdfPage += 1;
     await renderPdfPage();
   }
@@ -341,7 +429,7 @@ readerNext.onclick = async () => {
 window.addEventListener('popstate', () => {
   if (!readerPage.hidden) {
     readerPage.hidden = true;
-    document.body.classList.remove('reader-active');
+    setReaderActive(false);
     clearReaderSource();
   }
 });
