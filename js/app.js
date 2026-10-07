@@ -5,6 +5,7 @@ const state = {
   readerRendition: null,
   readerSession: 0,
   books: [
+    { title: 'Verity', author: 'Colleen Hoover', category: 'Literatura', color: '#2c2038', shelf: '#718a6a', source: 'assets/verity.epub', fileName: 'Verity.epub' },
     { title: 'Clean Code', author: 'Robert C. Martin', category: 'Programação', color: '#34495e', shelf: '#6687a8' },
     { title: 'O Design do Dia a Dia', author: 'Don Norman', category: 'Design', color: '#8d5a45', shelf: '#c96b52' },
     { title: '1984', author: 'George Orwell', category: 'Literatura', color: '#333333', shelf: '#718a6a' },
@@ -16,10 +17,10 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const fileInput = $('fileInput');
 const dialog = $('bookDialog');
-const readerDialog = $('readerDialog');
+const readerPage = $('readerPage');
 const readerFrame = $('readerFrame');
 const readerUnavailable = $('readerUnavailable');
-const readerControls = $('readerControls');
+const readerScroll = $('readerScroll');
 
 function renderShelves() {
   const shelves = $('shelves');
@@ -38,9 +39,9 @@ function renderShelves() {
     const row = shelf.querySelector('.books-row');
     books.forEach(book => {
       const item = document.createElement('article');
-      item.className = `book${book.file ? ' can-open' : ''}`;
+      item.className = `book${book.file || book.source ? ' can-open' : ''}`;
       item.innerHTML = `<div class="cover" style="--cover:${book.color || '#777'}"><span class="mini">LIBRYARI</span><strong>${escapeHtml(book.title)}</strong><span class="mini">${escapeHtml(book.author)}</span></div><div class="book-info"><strong>${escapeHtml(book.title)}</strong><span>${escapeHtml(book.author)}</span></div>`;
-      if (book.file) {
+      if (book.file || book.source) {
         item.tabIndex = 0;
         item.setAttribute('role', 'button');
         item.setAttribute('aria-label', `Abrir ${book.title}`);
@@ -127,7 +128,6 @@ function clearReaderSource() {
 
 function showReaderUnavailable(message) {
   readerFrame.hidden = true;
-  readerControls.hidden = true;
   readerUnavailable.hidden = false;
   readerUnavailable.querySelector('p').textContent = message;
 }
@@ -153,8 +153,27 @@ async function renderEpub(file, session) {
     const rendition = book.renderTo(readerFrame, {
       width: '100%',
       height: '100%',
-      flow: 'paginated',
+      manager: 'continuous',
+      flow: 'scrolled-doc',
       spread: 'none'
+    });
+    rendition.hooks.content.register((contents) => {
+      const document = contents.document;
+      if (document.getElementById('libryari-reader-image-style')) return;
+      const style = document.createElement('style');
+      style.id = 'libryari-reader-image-style';
+      style.textContent = `
+        img, svg, video, canvas {
+          box-sizing: border-box !important;
+          display: block !important;
+          max-width: 100% !important;
+          height: auto !important;
+          object-fit: contain !important;
+        }
+        img { width: auto !important; }
+        body { overflow-wrap: anywhere; }
+      `;
+      document.head.appendChild(style);
     });
     state.readerBook = book;
     state.readerRendition = rendition;
@@ -166,29 +185,48 @@ async function renderEpub(file, session) {
   }
 }
 
-function openReader(book) {
+async function getBookFile(book) {
+  if (book.file) return book.file;
+  const response = await fetch(book.source);
+  if (!response.ok) throw new Error('Book asset unavailable');
+  const blob = await response.blob();
+  book.file = new File([blob], book.fileName || book.source.split('/').pop(), {
+    type: blob.type || 'application/epub+zip'
+  });
+  return book.file;
+}
+
+async function openReader(book) {
   clearReaderSource();
   const session = state.readerSession;
-  const url = URL.createObjectURL(book.file);
-  const canReadInBrowser = isPdf(book.file) || isEpub(book.file);
+  const file = await getBookFile(book);
+  const url = URL.createObjectURL(file);
+  const canReadInBrowser = isPdf(file) || isEpub(file);
   state.readerUrl = url;
   $('readerTitle').textContent = book.title;
   $('readerOpenFile').href = url;
   $('readerOpenFile').textContent = canReadInBrowser ? 'Abrir em outra aba' : 'Abrir arquivo';
   readerFrame.hidden = !canReadInBrowser;
   readerUnavailable.hidden = canReadInBrowser;
-  readerControls.hidden = !isEpub(book.file);
-  if (isPdf(book.file)) renderPdf(url);
-  if (isEpub(book.file)) renderEpub(book.file, session);
+  readerScroll.scrollTop = 0;
+  readerPage.hidden = false;
+  document.body.classList.add('reader-active');
+  if (window.location.hash !== '#leitor') {
+    window.history.pushState({ reader: true }, '', '#leitor');
+  }
+  if (isPdf(file)) renderPdf(url);
+  if (isEpub(file)) renderEpub(file, session);
   if (!canReadInBrowser) {
     showReaderUnavailable('Este formato será aberto pelo leitor de arquivos do seu aparelho.');
   }
-  showDialog(readerDialog);
 }
 
 function closeReader() {
-  closeDialog(readerDialog);
+  if (readerPage.hidden) return;
+  readerPage.hidden = true;
+  document.body.classList.remove('reader-active');
   clearReaderSource();
+  if (window.location.hash === '#leitor') window.history.back();
 }
 
 $('addBtn').addEventListener('click', openImport);
@@ -217,9 +255,16 @@ $('saveBook').onclick = () => {
 };
 $('dialogClose').onclick = closeBookDialog;
 $('readerClose').onclick = closeReader;
-readerDialog.addEventListener('close', clearReaderSource);
-$('readerPrevious').onclick = () => state.readerRendition?.prev();
-$('readerNext').onclick = () => state.readerRendition?.next();
+window.addEventListener('popstate', () => {
+  if (!readerPage.hidden) {
+    readerPage.hidden = true;
+    document.body.classList.remove('reader-active');
+    clearReaderSource();
+  }
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !readerPage.hidden) closeReader();
+});
 
 document.querySelectorAll('.filter').forEach(btn => btn.onclick = () => {
   document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
