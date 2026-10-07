@@ -67,6 +67,23 @@
     </div>
   </dialog>
 
+  <dialog id="readerDialog" class="reader-dialog" aria-labelledby="readerTitle">
+    <header class="reader-toolbar">
+      <div>
+        <p class="eyebrow">LEITURA</p>
+        <h2 id="readerTitle">Livro</h2>
+      </div>
+      <div class="reader-actions">
+        <a id="readerOpenFile" class="reader-open-file" target="_blank" rel="noopener">Abrir arquivo</a>
+        <button class="dialog-close reader-close" id="readerClose" aria-label="Fechar leitor">×</button>
+      </div>
+    </header>
+    <iframe id="readerFrame" class="reader-frame" title="Leitor do livro"></iframe>
+    <div id="readerUnavailable" class="reader-unavailable" hidden>
+      <p>Este formato será aberto pelo leitor de arquivos do seu aparelho.</p>
+    </div>
+  </dialog>
+
   <script src="js/app.js"></script>
 </body>
 </html>
