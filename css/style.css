@@ -84,14 +84,20 @@ select { padding:12px; border:1px solid var(--line); background:var(--white); }
 .full { width:100%; }
 .reader-dialog { width:min(1100px, calc(100% - 30px)); max-height:calc(100dvh - 30px); overflow:hidden; }
 .reader-toolbar { min-height:78px; display:flex; align-items:center; justify-content:space-between; gap:20px; padding:16px 24px; border-bottom:1px solid var(--line); }
+.reader-toolbar > :first-child { min-width:0; }
 .reader-toolbar .eyebrow { margin-bottom:5px; }
 .reader-toolbar h2 { font-size:clamp(24px, 3vw, 36px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .reader-actions { display:flex; align-items:center; gap:18px; flex:0 0 auto; }
 .reader-open-file { color:var(--ink); font-size:13px; font-weight:600; text-decoration:underline; text-underline-offset:4px; cursor:pointer; }
 .reader-close { position:static; font-size:28px; }
-.reader-frame { display:block; width:100%; height:min(76vh, 820px); border:0; background:var(--white); }
+.reader-stage { position:relative; }
+.reader-frame { display:block; width:100%; height:min(76vh, 820px); background:var(--white); }
+.reader-frame iframe { width:100%; height:100%; border:0; }
+.reader-frame[hidden], .reader-unavailable[hidden], .reader-controls[hidden] { display:none; }
 .reader-unavailable { min-height:240px; display:grid; place-items:center; padding:36px; text-align:center; color:var(--muted); }
 .reader-unavailable p { max-width:360px; margin:0; line-height:1.6; }
+.reader-controls { position:absolute; right:18px; bottom:18px; left:18px; display:flex; justify-content:space-between; pointer-events:none; }
+.reader-page-button { width:42px; height:42px; border:1px solid var(--line); border-radius:50%; background:rgba(255,254,250,.94); color:var(--ink); font-size:21px; box-shadow:0 4px 16px rgba(0,0,0,.12); pointer-events:auto; }
 @media (max-width:760px) {
   .topbar { height:68px; padding:0 20px; }
   .add-btn { padding:10px 13px; font-size:12px; }
@@ -111,6 +117,7 @@ select { padding:12px; border:1px solid var(--line); background:var(--white); }
   .reader-open-file { font-size:12px; }
   .reader-actions { gap:10px; }
   .reader-frame { height:calc(100dvh - 70px); }
+  .reader-controls { right:14px; bottom:14px; left:14px; }
 }
 
 
