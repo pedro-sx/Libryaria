@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f5f3ee" />
+  <title>Libryari — sua biblioteca</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#">LIBRYARI<span>.DEV</span></a>
+    <div class="top-actions">
+      <button class="icon-btn" id="searchBtn" aria-label="Pesquisar">⌕</button>
+      <button class="add-btn" id="addBtn">＋ Adicionar livros</button>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="library-section library-section-main">
+      <div class="section-head library-head">
+        <div>
+          <p class="eyebrow">ESTANTES</p>
+          <h1>Minha biblioteca</h1>
+        </div>
+        <div class="library-tools">
+          <button class="filter active">Todos</button>
+          <button class="filter">Lendo</button>
+          <button class="filter">Quero ler</button>
+          <button class="filter">Lidos</button>
+        </div>
+      </div>
+
+      <div id="shelves" class="shelves"></div>
+      <div class="empty-library" id="emptyLibrary">
+        <div class="empty-icon">LIB</div>
+        <h3>Sua biblioteca começa aqui.</h3>
+        <p>Importe seus livros e a Libryari organiza as capas em estantes automaticamente.</p>
+        <button class="add-btn large" id="emptyLibraryBtn">＋ Adicionar livros</button>
+      </div>
+    </section>
+  </main>
+
+  <input id="fileInput" type="file" accept=".pdf,.epub,.mobi,.azw,.azw3" multiple hidden />
+
+  <dialog id="bookDialog" class="book-dialog">
+    <button class="dialog-close" id="dialogClose">×</button>
+    <div class="dialog-cover" id="dialogCover">L</div>
+    <div class="dialog-info">
+      <p class="eyebrow">NOVO LIVRO</p>
+      <h2 id="dialogTitle">Livro</h2>
+      <p id="dialogMeta">Arquivo importado</p>
+      <label>Categoria
+        <select id="categorySelect">
+          <option>Literatura</option>
+          <option>Programação</option>
+          <option>Design</option>
+          <option>Negócios</option>
+          <option>Psicologia</option>
+          <option>Estudos</option>
+        </select>
+      </label>
+      <button class="add-btn full" id="saveBook">Adicionar à biblioteca</button>
+    </div>
+  </dialog>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
