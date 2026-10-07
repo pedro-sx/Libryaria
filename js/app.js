@@ -1,5 +1,9 @@
 const state = {
   pendingFile: null,
+  readerUrl: null,
+  readerBook: null,
+  readerRendition: null,
+  readerSession: 0,
   books: [
     { title: 'Clean Code', author: 'Robert C. Martin', category: 'Programação', color: '#34495e', shelf: '#6687a8' },
     { title: 'O Design do Dia a Dia', author: 'Don Norman', category: 'Design', color: '#8d5a45', shelf: '#c96b52' },
@@ -15,6 +19,7 @@ const dialog = $('bookDialog');
 const readerDialog = $('readerDialog');
 const readerFrame = $('readerFrame');
 const readerUnavailable = $('readerUnavailable');
+const readerControls = $('readerControls');
 
 function renderShelves() {
   const shelves = $('shelves');
@@ -104,24 +109,80 @@ function isPdf(file) {
   return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
 }
 
+function isEpub(file) {
+  return file.type === 'application/epub+zip' || /\.epub$/i.test(file.name);
+}
+
 function clearReaderSource() {
-  readerFrame.removeAttribute('src');
+  state.readerSession += 1;
+  if (state.readerRendition?.destroy) state.readerRendition.destroy();
+  if (state.readerBook?.destroy) state.readerBook.destroy();
+  readerFrame.replaceChildren();
   const url = state.readerUrl;
   if (url) URL.revokeObjectURL(url);
   state.readerUrl = null;
+  state.readerBook = null;
+  state.readerRendition = null;
+}
+
+function showReaderUnavailable(message) {
+  readerFrame.hidden = true;
+  readerControls.hidden = true;
+  readerUnavailable.hidden = false;
+  readerUnavailable.querySelector('p').textContent = message;
+}
+
+function renderPdf(url) {
+  const pdfFrame = document.createElement('iframe');
+  pdfFrame.src = url;
+  pdfFrame.title = 'Leitor do livro';
+  readerFrame.appendChild(pdfFrame);
+}
+
+async function renderEpub(file, session) {
+  if (typeof window.ePub !== 'function') {
+    showReaderUnavailable('Não foi possível carregar o leitor EPUB. Toque em Abrir arquivo para continuar no leitor do aparelho.');
+    return;
+  }
+
+  try {
+    const data = await file.arrayBuffer();
+    if (state.readerSession !== session) return;
+
+    const book = window.ePub(data, { replacements: 'blobUrl' });
+    const rendition = book.renderTo(readerFrame, {
+      width: '100%',
+      height: '100%',
+      flow: 'paginated',
+      spread: 'none'
+    });
+    state.readerBook = book;
+    state.readerRendition = rendition;
+    await rendition.display();
+  } catch (error) {
+    if (state.readerSession === session) {
+      showReaderUnavailable('Não foi possível abrir este EPUB aqui. Toque em Abrir arquivo para usar o leitor do aparelho.');
+    }
+  }
 }
 
 function openReader(book) {
   clearReaderSource();
+  const session = state.readerSession;
   const url = URL.createObjectURL(book.file);
-  const canReadInBrowser = isPdf(book.file);
+  const canReadInBrowser = isPdf(book.file) || isEpub(book.file);
   state.readerUrl = url;
   $('readerTitle').textContent = book.title;
   $('readerOpenFile').href = url;
   $('readerOpenFile').textContent = canReadInBrowser ? 'Abrir em outra aba' : 'Abrir arquivo';
   readerFrame.hidden = !canReadInBrowser;
   readerUnavailable.hidden = canReadInBrowser;
-  if (canReadInBrowser) readerFrame.src = url;
+  readerControls.hidden = !isEpub(book.file);
+  if (isPdf(book.file)) renderPdf(url);
+  if (isEpub(book.file)) renderEpub(book.file, session);
+  if (!canReadInBrowser) {
+    showReaderUnavailable('Este formato será aberto pelo leitor de arquivos do seu aparelho.');
+  }
   showDialog(readerDialog);
 }
 
@@ -157,6 +218,8 @@ $('saveBook').onclick = () => {
 $('dialogClose').onclick = closeBookDialog;
 $('readerClose').onclick = closeReader;
 readerDialog.addEventListener('close', clearReaderSource);
+$('readerPrevious').onclick = () => state.readerRendition?.prev();
+$('readerNext').onclick = () => state.readerRendition?.next();
 
 document.querySelectorAll('.filter').forEach(btn => btn.onclick = () => {
   document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
