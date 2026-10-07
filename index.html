@@ -78,12 +78,19 @@
         <button class="dialog-close reader-close" id="readerClose" aria-label="Fechar leitor">×</button>
       </div>
     </header>
-    <iframe id="readerFrame" class="reader-frame" title="Leitor do livro"></iframe>
+    <div class="reader-stage">
+      <div id="readerFrame" class="reader-frame" aria-live="polite"></div>
+      <div id="readerControls" class="reader-controls" hidden>
+        <button id="readerPrevious" class="reader-page-button" aria-label="Página anterior">←</button>
+        <button id="readerNext" class="reader-page-button" aria-label="Próxima página">→</button>
+      </div>
+    </div>
     <div id="readerUnavailable" class="reader-unavailable" hidden>
       <p>Este formato será aberto pelo leitor de arquivos do seu aparelho.</p>
     </div>
   </dialog>
 
+  <script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
