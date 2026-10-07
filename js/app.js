@@ -3,6 +3,9 @@ const state = {
   readerUrl: null,
   readerBook: null,
   readerRendition: null,
+  readerPdf: null,
+  readerPdfPage: 1,
+  readerMode: null,
   readerSession: 0,
   books: [
     { title: 'Verity', author: 'Colleen Hoover', category: 'Literatura', color: '#2c2038', shelf: '#718a6a', source: 'assets/verity.epub', fileName: 'Verity.epub' },
@@ -20,7 +23,9 @@ const dialog = $('bookDialog');
 const readerPage = $('readerPage');
 const readerFrame = $('readerFrame');
 const readerUnavailable = $('readerUnavailable');
-const readerScroll = $('readerScroll');
+const readerPageStatus = $('readerPageStatus');
+const readerPrevious = $('readerPrevious');
+const readerNext = $('readerNext');
 
 function renderShelves() {
   const shelves = $('shelves');
@@ -124,6 +129,9 @@ function clearReaderSource() {
   state.readerUrl = null;
   state.readerBook = null;
   state.readerRendition = null;
+  state.readerPdf = null;
+  state.readerPdfPage = 1;
+  state.readerMode = null;
 }
 
 function showReaderUnavailable(message) {
@@ -132,11 +140,59 @@ function showReaderUnavailable(message) {
   readerUnavailable.querySelector('p').textContent = message;
 }
 
-function renderPdf(url) {
-  const pdfFrame = document.createElement('iframe');
-  pdfFrame.src = url;
-  pdfFrame.title = 'Leitor do livro';
-  readerFrame.appendChild(pdfFrame);
+function updateReaderNavigation(current, total) {
+  readerPageStatus.textContent = total ? `${current} / ${total}` : 'Leitura';
+  readerPrevious.disabled = !total || current <= 1;
+  readerNext.disabled = !total || current >= total;
+}
+
+function updateEpubNavigation(location) {
+  const page = (location.start?.displayed?.page || 0) + 1;
+  readerPageStatus.textContent = `Página ${page}`;
+  readerPrevious.disabled = Boolean(location.atStart);
+  readerNext.disabled = Boolean(location.atEnd);
+}
+
+async function renderPdfPage() {
+  const pdf = state.readerPdf;
+  if (!pdf) return;
+
+  const page = await pdf.getPage(state.readerPdfPage);
+  const width = Math.max(readerFrame.clientWidth, 1);
+  const height = Math.max(readerFrame.clientHeight, 1);
+  const original = page.getViewport({ scale: 1 });
+  const scale = Math.min(width / original.width, height / original.height) * window.devicePixelRatio;
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d', { alpha: false });
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+  canvas.style.width = `${Math.floor(viewport.width / window.devicePixelRatio)}px`;
+  canvas.style.height = `${Math.floor(viewport.height / window.devicePixelRatio)}px`;
+  readerFrame.replaceChildren(canvas);
+  await page.render({ canvasContext: context, viewport }).promise;
+  updateReaderNavigation(state.readerPdfPage, pdf.numPages);
+}
+
+async function renderPdf(file, session) {
+  if (!window.pdfjsLib) {
+    showReaderUnavailable('Não foi possível carregar o leitor PDF. Toque em Abrir para abrir o arquivo em outra aba.');
+    return;
+  }
+
+  try {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const data = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data }).promise;
+    if (state.readerSession !== session) return;
+    state.readerPdf = pdf;
+    state.readerMode = 'pdf';
+    await renderPdfPage();
+  } catch (error) {
+    if (state.readerSession === session) {
+      showReaderUnavailable('Não foi possível abrir este PDF aqui. Toque em Abrir para abrir o arquivo em outra aba.');
+    }
+  }
 }
 
 async function renderEpub(file, session) {
@@ -153,8 +209,7 @@ async function renderEpub(file, session) {
     const rendition = book.renderTo(readerFrame, {
       width: '100%',
       height: '100%',
-      manager: 'continuous',
-      flow: 'scrolled-doc',
+      flow: 'paginated',
       spread: 'none'
     });
     rendition.hooks.content.register((contents) => {
@@ -171,12 +226,20 @@ async function renderEpub(file, session) {
           object-fit: contain !important;
         }
         img { width: auto !important; }
+        html, body { overflow: hidden !important; }
         body { overflow-wrap: anywhere; }
       `;
       document.head.appendChild(style);
     });
+    rendition.on('relocated', (location) => {
+      if (state.readerRendition !== rendition) return;
+      updateEpubNavigation(location);
+    });
     state.readerBook = book;
     state.readerRendition = rendition;
+    state.readerMode = 'epub';
+    readerPrevious.disabled = true;
+    readerNext.disabled = false;
     await rendition.display();
   } catch (error) {
     if (state.readerSession === session) {
@@ -199,25 +262,31 @@ async function getBookFile(book) {
 async function openReader(book) {
   clearReaderSource();
   const session = state.readerSession;
-  const file = await getBookFile(book);
-  const url = URL.createObjectURL(file);
-  const canReadInBrowser = isPdf(file) || isEpub(file);
-  state.readerUrl = url;
   $('readerTitle').textContent = book.title;
-  $('readerOpenFile').href = url;
-  $('readerOpenFile').textContent = canReadInBrowser ? 'Abrir em outra aba' : 'Abrir arquivo';
-  readerFrame.hidden = !canReadInBrowser;
-  readerUnavailable.hidden = canReadInBrowser;
-  readerScroll.scrollTop = 0;
   readerPage.hidden = false;
   document.body.classList.add('reader-active');
+  updateReaderNavigation(0, 0);
   if (window.location.hash !== '#leitor') {
     window.history.pushState({ reader: true }, '', '#leitor');
   }
-  if (isPdf(file)) renderPdf(url);
-  if (isEpub(file)) renderEpub(file, session);
-  if (!canReadInBrowser) {
-    showReaderUnavailable('Este formato será aberto pelo leitor de arquivos do seu aparelho.');
+  try {
+    const file = await getBookFile(book);
+    if (state.readerSession !== session) return;
+    const url = URL.createObjectURL(file);
+    const canReadInBrowser = isPdf(file) || isEpub(file);
+    state.readerUrl = url;
+    $('readerOpenFile').href = url;
+    readerFrame.hidden = !canReadInBrowser;
+    readerUnavailable.hidden = canReadInBrowser;
+    if (isPdf(file)) renderPdf(file, session);
+    if (isEpub(file)) renderEpub(file, session);
+    if (!canReadInBrowser) {
+      showReaderUnavailable('Este formato será aberto pelo leitor de arquivos do seu aparelho.');
+    }
+  } catch (error) {
+    if (state.readerSession === session) {
+      showReaderUnavailable('Não foi possível carregar este livro. Tente novamente.');
+    }
   }
 }
 
@@ -255,6 +324,20 @@ $('saveBook').onclick = () => {
 };
 $('dialogClose').onclick = closeBookDialog;
 $('readerClose').onclick = closeReader;
+readerPrevious.onclick = async () => {
+  if (state.readerMode === 'epub') await state.readerRendition?.prev();
+  if (state.readerMode === 'pdf' && state.readerPdfPage > 1) {
+    state.readerPdfPage -= 1;
+    await renderPdfPage();
+  }
+};
+readerNext.onclick = async () => {
+  if (state.readerMode === 'epub') await state.readerRendition?.next();
+  if (state.readerMode === 'pdf' && state.readerPdf && state.readerPdfPage < state.readerPdf.numPages) {
+    state.readerPdfPage += 1;
+    await renderPdfPage();
+  }
+};
 window.addEventListener('popstate', () => {
   if (!readerPage.hidden) {
     readerPage.hidden = true;
