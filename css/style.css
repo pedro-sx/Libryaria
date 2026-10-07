@@ -1,142 +1,95 @@
-:root {
-  --paper: #f5f3ee;
-  --ink: #171717;
-  --muted: #77736c;
-  --line: #dedbd3;
-  --white: #fffefa;
-  --terracotta: #c96b52;
-  --blue: #6687a8;
-  --green: #718a6a;
-  --yellow: #d4a84f;
-  --lilac: #8a789b;
-  --serif: "DM Serif Display", Georgia, serif;
-  --sans: Inter, Arial, sans-serif;
-}
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); }
-button, input, select { font: inherit; }
-button { cursor: pointer; }
-.topbar { height: 78px; padding: 0 5vw; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20; background:rgba(245,243,238,.94); backdrop-filter: blur(14px); }
-.brand { color:var(--ink); text-decoration:none; font-weight:700; letter-spacing:.11em; font-size:18px; }
-.brand span { color:var(--muted); font-weight:500; }
-.top-actions { display:flex; align-items:center; gap:12px; }
-.icon-btn { border:0; background:transparent; font-size:28px; width:42px; height:42px; }
-.add-btn { border:0; background:var(--ink); color:var(--white); border-radius:999px; padding:12px 18px; font-weight:600; }
-.add-btn:hover { transform:translateY(-1px); }
-.page { max-width:1400px; margin:0 auto; padding:0 5vw 80px; }
-.hero { min-height:460px; display:grid; grid-template-columns:1.25fr .75fr; align-items:center; border-bottom:1px solid var(--line); }
-.eyebrow { margin:0 0 12px; font-size:11px; letter-spacing:.17em; font-weight:700; color:var(--muted); }
-h1,h2,h3,p { margin-top:0; }
-h1 { font-family:var(--serif); font-size:clamp(54px, 8vw, 112px); line-height:.87; font-weight:400; letter-spacing:-.035em; margin-bottom:28px; }
-h1 em { color:var(--terracotta); font-style:normal; }
-.hero-copy { max-width:500px; color:var(--muted); font-size:16px; line-height:1.7; }
-.hero-mark { justify-self:end; width:min(27vw,300px); height:min(27vw,300px); border-radius:50%; background:var(--yellow); display:grid; place-items:center; font:220px/.8 var(--serif); color:var(--ink); transform:rotate(-7deg); }
-section { padding-top:72px; }
-.section-head { display:flex; justify-content:space-between; align-items:end; margin-bottom:22px; }
-h2 { font:400 clamp(34px,4vw,54px)/.95 var(--serif); letter-spacing:-.025em; margin:0; }
-.section-head > span { color:var(--muted); font-size:13px; }
-.continue-card { min-height:250px; display:grid; grid-template-columns:180px 1fr; gap:34px; align-items:center; padding:30px; background:var(--ink); color:var(--white); border-radius:2px; }
-.empty-book { width:150px; height:190px; display:grid; place-items:center; background:var(--yellow); color:var(--ink); font:70px var(--serif); box-shadow:14px 14px 0 var(--terracotta); }
-.card-kicker { color:#aaa69e; font-size:10px; font-weight:700; letter-spacing:.15em; }
-.continue-card h3 { font:400 36px var(--serif); margin-bottom:10px; }
-.continue-card p { color:#aaa69e; line-height:1.6; }
-.text-btn { border:0; padding:0; background:transparent; color:var(--white); font-weight:600; }
-.library-head { align-items:end; }
-.library-tools { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
-.filter { border:1px solid var(--line); background:transparent; padding:9px 13px; border-radius:999px; font-size:12px; color:var(--muted); }
-.filter.active { background:var(--ink); color:var(--white); border-color:var(--ink); }
-.shelves { display:grid; gap:58px; }
-.shelf { --shelf: var(--terracotta); }
-.shelf-title { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
-.shelf-title h3 { font:400 30px var(--serif); margin:0; }
-.shelf-title span { color:var(--muted); font-size:12px; }
-.books-row { display:flex; gap:22px; overflow-x:auto; padding:12px 8px 18px; scrollbar-width:thin; }
-.books-row::after { content:""; min-width:20px; }
-.book { flex:0 0 145px; }
-.book.can-open { cursor:pointer; }
-.book.can-open:focus-visible { outline:3px solid var(--ink); outline-offset:5px; }
-.cover { height:205px; background:var(--cover, #777); color:white; padding:16px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 12px 0 var(--shelf); transition:.2s ease; }
-.book:hover .cover { transform:translateY(-5px) rotate(-1deg); }
-.cover .mini { font-size:9px; letter-spacing:.14em; opacity:.8; }
-.cover strong { font:400 24px/1.02 var(--serif); }
-.book-info { padding-top:16px; }
-.book-info strong { display:block; font-size:13px; line-height:1.3; }
-.book-info span { display:block; margin-top:4px; font-size:11px; color:var(--muted); }
-.empty-library { text-align:center; padding:80px 20px; border:1px dashed var(--line); }
-.empty-library .empty-icon { font:400 48px var(--serif); margin-bottom:12px; }
-.empty-library h3 { font:400 32px var(--serif); margin-bottom:8px; }
-.empty-library p { color:var(--muted); max-width:450px; margin:0 auto 22px; line-height:1.6; }
-.add-btn.large { padding:13px 22px; }
-.book-dialog, .reader-dialog { display:none; border:0; padding:0; background:var(--paper); color:var(--ink); box-shadow:0 30px 100px rgba(0,0,0,.25); }
-.book-dialog { width:min(760px, calc(100% - 30px)); }
-.book-dialog[open], .reader-dialog[open] { display:block; }
-.book-dialog::backdrop, .reader-dialog::backdrop { background:rgba(23,23,23,.55); backdrop-filter:blur(5px); }
-.book-dialog.dialog-fallback-open, .reader-dialog.dialog-fallback-open { position:fixed; top:50%; left:50%; z-index:101; margin:0; transform:translate(-50%, -50%); }
-body.dialog-fallback-active::before { content:""; position:fixed; inset:0; z-index:100; background:rgba(23,23,23,.55); backdrop-filter:blur(5px); }
-.dialog-close { position:absolute; top:14px; right:18px; border:0; background:transparent; font-size:30px; z-index:2; }
-.dialog-cover { width:190px; height:260px; background:var(--yellow); display:grid; place-items:center; font:90px var(--serif); float:left; margin-right:36px; }
-.dialog-info { min-height:260px; padding:38px 36px 38px 0; }
-.dialog-info h2 { margin-bottom:8px; }
-.dialog-info > p { color:var(--muted); margin-bottom:28px; }
-.dialog-info label { display:grid; gap:7px; font-size:12px; font-weight:600; margin-bottom:20px; }
-select { padding:12px; border:1px solid var(--line); background:var(--white); }
-.full { width:100%; }
-.reader-dialog { width:min(1100px, calc(100% - 30px)); max-height:calc(100dvh - 30px); overflow:hidden; }
-.reader-toolbar { min-height:78px; display:flex; align-items:center; justify-content:space-between; gap:20px; padding:16px 24px; border-bottom:1px solid var(--line); }
-.reader-toolbar > :first-child { min-width:0; }
-.reader-toolbar .eyebrow { margin-bottom:5px; }
-.reader-toolbar h2 { font-size:clamp(24px, 3vw, 36px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.reader-actions { display:flex; align-items:center; gap:18px; flex:0 0 auto; }
-.reader-open-file { color:var(--ink); font-size:13px; font-weight:600; text-decoration:underline; text-underline-offset:4px; cursor:pointer; }
-.reader-close { position:static; font-size:28px; }
-.reader-stage { position:relative; }
-.reader-frame { display:block; width:100%; height:min(76vh, 820px); background:var(--white); }
-.reader-frame iframe { width:100%; height:100%; border:0; }
-.reader-frame[hidden], .reader-unavailable[hidden], .reader-controls[hidden] { display:none; }
-.reader-unavailable { min-height:240px; display:grid; place-items:center; padding:36px; text-align:center; color:var(--muted); }
-.reader-unavailable p { max-width:360px; margin:0; line-height:1.6; }
-.reader-controls { position:absolute; right:18px; bottom:18px; left:18px; display:flex; justify-content:space-between; pointer-events:none; }
-.reader-page-button { width:42px; height:42px; border:1px solid var(--line); border-radius:50%; background:rgba(255,254,250,.94); color:var(--ink); font-size:21px; box-shadow:0 4px 16px rgba(0,0,0,.12); pointer-events:auto; }
-@media (max-width:760px) {
-  .topbar { height:68px; padding:0 20px; }
-  .add-btn { padding:10px 13px; font-size:12px; }
-  .page { padding:0 20px 60px; }
-  .hero { min-height:440px; grid-template-columns:1fr; padding:60px 0; }
-  .hero-mark { width:130px; height:130px; font-size:95px; justify-self:start; margin-top:10px; }
-  .continue-card { grid-template-columns:100px 1fr; gap:22px; padding:22px; }
-  .empty-book { width:90px; height:125px; font-size:45px; box-shadow:9px 9px 0 var(--terracotta); }
-  .continue-card h3 { font-size:25px; }
-  .library-head { display:block; }
-  .library-tools { justify-content:flex-start; margin-top:20px; }
-  .dialog-cover { float:none; margin:0; width:100%; height:210px; }
-  .dialog-info { padding:28px; }
-  .reader-dialog { width:100%; height:100dvh; max-height:100dvh; }
-  .reader-toolbar { min-height:70px; padding:13px 18px; }
-  .reader-toolbar h2 { font-size:25px; }
-  .reader-open-file { font-size:12px; }
-  .reader-actions { gap:10px; }
-  .reader-frame { height:calc(100dvh - 70px); }
-  .reader-controls { right:14px; bottom:14px; left:14px; }
-}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f5f3ee" />
+  <title>Libryari — sua biblioteca</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#">LIBRYARI<span>.DEV</span></a>
+    <div class="top-actions">
+      <button class="icon-btn" id="searchBtn" aria-label="Pesquisar">⌕</button>
+      <button class="add-btn" id="addBtn">＋ Adicionar livros</button>
+    </div>
+  </header>
 
+  <main class="page">
+    <section class="library-section library-section-main">
+      <div class="section-head library-head">
+        <div>
+          <p class="eyebrow">ESTANTES</p>
+          <h1>Minha biblioteca</h1>
+        </div>
+        <div class="library-tools">
+          <button class="filter active">Todos</button>
+          <button class="filter">Lendo</button>
+          <button class="filter">Quero ler</button>
+          <button class="filter">Lidos</button>
+        </div>
+      </div>
 
-/* Biblioteca como tela principal */
-.library-section-main {
-  padding-top: 2.5rem;
-}
-.library-section-main .library-head {
-  align-items: flex-end;
-}
-.library-section-main .library-head h1 {
-  margin: .15rem 0 0;
-  font-family: var(--serif);
-  font-size: clamp(2.4rem, 7vw, 4.5rem);
-  line-height: .95;
-  letter-spacing: -.04em;
-}
-@media (max-width: 720px) {
-  .library-section-main { padding-top: 1.5rem; }
-  .library-section-main .library-head { align-items: flex-start; }
-  .library-section-main .library-head h1 { font-size: 2.7rem; }
-}
+      <div id="shelves" class="shelves"></div>
+      <div class="empty-library" id="emptyLibrary">
+        <div class="empty-icon">LIB</div>
+        <h3>Sua biblioteca começa aqui.</h3>
+        <p>Importe seus livros e a Libryari organiza as capas em estantes automaticamente.</p>
+        <button class="add-btn large" id="emptyLibraryBtn">＋ Adicionar livros</button>
+      </div>
+    </section>
+  </main>
+
+  <input id="fileInput" type="file" accept=".pdf,.epub,.mobi,.azw,.azw3" multiple hidden />
+
+  <dialog id="bookDialog" class="book-dialog">
+    <button class="dialog-close" id="dialogClose">×</button>
+    <div class="dialog-cover" id="dialogCover">L</div>
+    <div class="dialog-info">
+      <p class="eyebrow">NOVO LIVRO</p>
+      <h2 id="dialogTitle">Livro</h2>
+      <p id="dialogMeta">Arquivo importado</p>
+      <label>Categoria
+        <select id="categorySelect">
+          <option>Literatura</option>
+          <option>Programação</option>
+          <option>Design</option>
+          <option>Negócios</option>
+          <option>Psicologia</option>
+          <option>Estudos</option>
+        </select>
+      </label>
+      <button class="add-btn full" id="saveBook">Adicionar à biblioteca</button>
+    </div>
+  </dialog>
+
+  <section id="readerPage" class="reader-page" aria-labelledby="readerTitle" hidden>
+    <header class="reader-toolbar">
+      <div>
+        <p class="eyebrow">LEITURA</p>
+        <h2 id="readerTitle">Livro</h2>
+      </div>
+      <div class="reader-actions">
+        <a id="readerOpenFile" class="reader-open-file" target="_blank" rel="noopener">Abrir arquivo</a>
+        <button class="reader-back" id="readerClose" aria-label="Voltar para a biblioteca">← <span>Biblioteca</span></button>
+      </div>
+    </header>
+    <div id="readerScroll" class="reader-scroll">
+      <div class="reader-stage">
+        <div id="readerFrame" class="reader-frame" aria-live="polite"></div>
+        <div id="readerUnavailable" class="reader-unavailable" hidden>
+          <p>Este formato será aberto pelo leitor de arquivos do seu aparelho.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
