@@ -67,7 +67,7 @@
     </div>
   </dialog>
 
-  <dialog id="readerDialog" class="reader-dialog" aria-labelledby="readerTitle">
+  <section id="readerPage" class="reader-page" aria-labelledby="readerTitle" hidden>
     <header class="reader-toolbar">
       <div>
         <p class="eyebrow">LEITURA</p>
@@ -75,21 +75,20 @@
       </div>
       <div class="reader-actions">
         <a id="readerOpenFile" class="reader-open-file" target="_blank" rel="noopener">Abrir arquivo</a>
-        <button class="dialog-close reader-close" id="readerClose" aria-label="Fechar leitor">×</button>
+        <button class="reader-back" id="readerClose" aria-label="Voltar para a biblioteca">← <span>Biblioteca</span></button>
       </div>
     </header>
-    <div class="reader-stage">
-      <div id="readerFrame" class="reader-frame" aria-live="polite"></div>
-      <div id="readerControls" class="reader-controls" hidden>
-        <button id="readerPrevious" class="reader-page-button" aria-label="Página anterior">←</button>
-        <button id="readerNext" class="reader-page-button" aria-label="Próxima página">→</button>
+    <div id="readerScroll" class="reader-scroll">
+      <div class="reader-stage">
+        <div id="readerFrame" class="reader-frame" aria-live="polite"></div>
+        <div id="readerUnavailable" class="reader-unavailable" hidden>
+          <p>Este formato será aberto pelo leitor de arquivos do seu aparelho.</p>
+        </div>
       </div>
     </div>
-    <div id="readerUnavailable" class="reader-unavailable" hidden>
-      <p>Este formato será aberto pelo leitor de arquivos do seu aparelho.</p>
-    </div>
-  </dialog>
+  </section>
 
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
   <script src="js/app.js"></script>
 </body>
