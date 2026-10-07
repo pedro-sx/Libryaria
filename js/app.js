@@ -12,6 +12,9 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const fileInput = $('fileInput');
 const dialog = $('bookDialog');
+const readerDialog = $('readerDialog');
+const readerFrame = $('readerFrame');
+const readerUnavailable = $('readerUnavailable');
 
 function renderShelves() {
   const shelves = $('shelves');
@@ -26,12 +29,24 @@ function renderShelves() {
     const shelf = document.createElement('section');
     shelf.className = 'shelf';
     shelf.style.setProperty('--shelf', books[0].shelf || colors[index % colors.length]);
-    shelf.innerHTML = `<div class="shelf-title"><h3>${category}</h3><span>${books.length} livro${books.length === 1 ? '' : 's'}</span></div><div class="books-row"></div>`;
+    shelf.innerHTML = `<div class="shelf-title"><h3>${escapeHtml(category)}</h3><span>${books.length} livro${books.length === 1 ? '' : 's'}</span></div><div class="books-row"></div>`;
     const row = shelf.querySelector('.books-row');
     books.forEach(book => {
       const item = document.createElement('article');
-      item.className = 'book';
-      item.innerHTML = `<div class="cover" style="--cover:${book.color || '#777'}"><span class="mini">LIBRYARI</span><strong>${book.title}</strong><span class="mini">${book.author}</span></div><div class="book-info"><strong>${book.title}</strong><span>${book.author}</span></div>`;
+      item.className = `book${book.file ? ' can-open' : ''}`;
+      item.innerHTML = `<div class="cover" style="--cover:${book.color || '#777'}"><span class="mini">LIBRYARI</span><strong>${escapeHtml(book.title)}</strong><span class="mini">${escapeHtml(book.author)}</span></div><div class="book-info"><strong>${escapeHtml(book.title)}</strong><span>${escapeHtml(book.author)}</span></div>`;
+      if (book.file) {
+        item.tabIndex = 0;
+        item.setAttribute('role', 'button');
+        item.setAttribute('aria-label', `Abrir ${book.title}`);
+        item.addEventListener('click', () => openReader(book));
+        item.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openReader(book);
+          }
+        });
+      }
       row.appendChild(item);
     });
     shelves.appendChild(shelf);
@@ -44,32 +59,75 @@ function openImport() {
   fileInput.click();
 }
 
-function showBookDialog() {
-  if (typeof dialog.showModal === 'function') {
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  })[character]);
+}
+
+function showDialog(element) {
+  if (typeof element.showModal === 'function') {
     try {
-      dialog.showModal();
+      element.showModal();
       return;
     } catch (error) {
       // Use the CSS fallback when the browser exposes dialog but cannot open it.
     }
   }
 
-  dialog.setAttribute('open', '');
-  dialog.classList.add('dialog-fallback-open');
+  element.setAttribute('open', '');
+  element.classList.add('dialog-fallback-open');
   document.body.classList.add('dialog-fallback-active');
 }
 
-function closeBookDialog() {
-  if (dialog.classList.contains('dialog-fallback-open')) {
-    dialog.removeAttribute('open');
-    dialog.classList.remove('dialog-fallback-open');
+function closeDialog(element) {
+  if (element.classList.contains('dialog-fallback-open')) {
+    element.removeAttribute('open');
+    element.classList.remove('dialog-fallback-open');
     document.body.classList.remove('dialog-fallback-active');
     return;
   }
 
-  if (typeof dialog.close === 'function' && dialog.open) {
-    dialog.close();
+  if (typeof element.close === 'function' && element.open) {
+    element.close();
   }
+}
+
+function showBookDialog() { showDialog(dialog); }
+function closeBookDialog() { closeDialog(dialog); }
+
+function isPdf(file) {
+  return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+}
+
+function clearReaderSource() {
+  readerFrame.removeAttribute('src');
+  const url = state.readerUrl;
+  if (url) URL.revokeObjectURL(url);
+  state.readerUrl = null;
+}
+
+function openReader(book) {
+  clearReaderSource();
+  const url = URL.createObjectURL(book.file);
+  const canReadInBrowser = isPdf(book.file);
+  state.readerUrl = url;
+  $('readerTitle').textContent = book.title;
+  $('readerOpenFile').href = url;
+  $('readerOpenFile').textContent = canReadInBrowser ? 'Abrir em outra aba' : 'Abrir arquivo';
+  readerFrame.hidden = !canReadInBrowser;
+  readerUnavailable.hidden = canReadInBrowser;
+  if (canReadInBrowser) readerFrame.src = url;
+  showDialog(readerDialog);
+}
+
+function closeReader() {
+  closeDialog(readerDialog);
+  clearReaderSource();
 }
 
 $('addBtn').addEventListener('click', openImport);
@@ -91,12 +149,14 @@ $('saveBook').onclick = () => {
   const title = $('dialogTitle').textContent.trim();
   const category = $('categorySelect').value;
   const palette = ['#34495e','#8d5a45','#333333','#6d5c82','#876d37'];
-  state.books.unshift({ title, author: 'Importado', category, color: palette[Math.floor(Math.random()*palette.length)], shelf: getShelf(category) });
+  state.books.unshift({ title, author: 'Importado', category, color: palette[Math.floor(Math.random()*palette.length)], shelf: getShelf(category), file });
   renderShelves();
   closeBookDialog();
   state.pendingFile = null;
 };
 $('dialogClose').onclick = closeBookDialog;
+$('readerClose').onclick = closeReader;
+readerDialog.addEventListener('close', clearReaderSource);
 
 document.querySelectorAll('.filter').forEach(btn => btn.onclick = () => {
   document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
