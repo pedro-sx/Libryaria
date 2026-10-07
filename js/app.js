@@ -38,10 +38,42 @@ function renderShelves() {
   });
 }
 
-function openImport() { fileInput.click(); }
-$('addBtn').onclick = openImport;
-$('emptyAddBtn').onclick = openImport;
-$('emptyLibraryBtn').onclick = openImport;
+function openImport() {
+  // Keep the picker call directly inside the button's click handler so mobile
+  // browsers treat it as a user action and allow access to the file chooser.
+  fileInput.click();
+}
+
+function showBookDialog() {
+  if (typeof dialog.showModal === 'function') {
+    try {
+      dialog.showModal();
+      return;
+    } catch (error) {
+      // Use the CSS fallback when the browser exposes dialog but cannot open it.
+    }
+  }
+
+  dialog.setAttribute('open', '');
+  dialog.classList.add('dialog-fallback-open');
+  document.body.classList.add('dialog-fallback-active');
+}
+
+function closeBookDialog() {
+  if (dialog.classList.contains('dialog-fallback-open')) {
+    dialog.removeAttribute('open');
+    dialog.classList.remove('dialog-fallback-open');
+    document.body.classList.remove('dialog-fallback-active');
+    return;
+  }
+
+  if (typeof dialog.close === 'function' && dialog.open) {
+    dialog.close();
+  }
+}
+
+$('addBtn').addEventListener('click', openImport);
+$('emptyLibraryBtn').addEventListener('click', openImport);
 
 fileInput.addEventListener('change', () => {
   const file = fileInput.files[0];
@@ -49,7 +81,7 @@ fileInput.addEventListener('change', () => {
   state.pendingFile = file;
   $('dialogTitle').textContent = file.name.replace(/\.(pdf|epub|mobi|azw3?)$/i, '').replace(/[-_]+/g, ' ');
   $('dialogMeta').textContent = `${file.name} · ${(file.size / 1024 / 1024).toFixed(1)} MB`;
-  dialog.showModal();
+  showBookDialog();
   fileInput.value = '';
 });
 
@@ -61,10 +93,10 @@ $('saveBook').onclick = () => {
   const palette = ['#34495e','#8d5a45','#333333','#6d5c82','#876d37'];
   state.books.unshift({ title, author: 'Importado', category, color: palette[Math.floor(Math.random()*palette.length)], shelf: getShelf(category) });
   renderShelves();
-  dialog.close();
+  closeBookDialog();
   state.pendingFile = null;
 };
-$('dialogClose').onclick = () => dialog.close();
+$('dialogClose').onclick = closeBookDialog;
 
 document.querySelectorAll('.filter').forEach(btn => btn.onclick = () => {
   document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
